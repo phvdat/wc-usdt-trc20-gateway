@@ -17,6 +17,7 @@ require_once __DIR__ . '/traits/trait-tron-api.php';
 require_once __DIR__ . '/traits/trait-payment-matching.php';
 require_once __DIR__ . '/traits/trait-ajax-handlers.php';
 require_once __DIR__ . '/traits/trait-frontend.php';
+require_once __DIR__ . '/traits/trait-admin-notification.php';
 
 if ( ! class_exists( 'WC_Gateway_USDT_TRC20' ) ) {
 
@@ -27,6 +28,7 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
     use WC_USDT_TRC20_Payment_Matching;
     use WC_USDT_TRC20_Ajax_Handlers;
     use WC_USDT_TRC20_Frontend;
+    use WC_USDT_TRC20_Admin_Notification;
 
     // -------------------------------------------------------------------------
     // Constants

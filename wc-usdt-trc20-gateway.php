@@ -35,6 +35,10 @@ final class WC_USDT_TRC20_Plugin {
         }
         require_once __DIR__ . '/includes/class-wc-gateway-usdt-trc20.php';
 
+        // Admin notification (on-hold → processing).
+        require_once __DIR__ . '/includes/traits/trait-admin-notification.php';
+        WC_Gateway_USDT_TRC20::register_admin_notification_hook();
+
         // Register AJAX handlers at plugin level. The gateway constructor is not
         // guaranteed to run during admin-ajax.php requests.
         add_action('wp_ajax_wc_usdt_trc20_payment_status', ['WC_Gateway_USDT_TRC20', 'ajax_payment_status']);
