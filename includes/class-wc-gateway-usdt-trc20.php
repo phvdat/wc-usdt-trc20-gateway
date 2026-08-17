@@ -229,17 +229,18 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
     private function make_unique_amount( $order ) {
         // Truncate (not round) to 2 decimal places to match the displayed total.
         $base  = (float) $order->get_total();
-        $whole = floor( $base * 100 ) / 100;      // e.g. 8.99
-        $base2 = number_format( $whole, 2, '.', '' );  // "8.99"
+        $whole = floor( $base * 100 ) / 100;
 
         $max_tries = 20;
 
         for ( $i = 0; $i < $max_tries; $i++ ) {
-            // 4-digit suffix occupying decimal places 3–6.
-            // Range 0001–9999 ensures the suffix is never all-zeros (which
-            // would make the unique amount equal to the bare order total).
-            $suffix    = str_pad( (string) wp_rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
-            $candidate = $this->normalise_usdt_amount( $base2 . $suffix );
+            $suffix    = wp_rand( 1, 999 );
+            $deduction = $suffix / 1000000;
+            $candidate = $this->normalise_usdt_amount( $whole - $deduction );
+
+            if ( $candidate <= 0 || $candidate >= $whole ) {
+                continue;
+            }
 
             if ( ! $this->unique_amount_in_use( $candidate, $order->get_id() ) ) {
                 return $candidate;
@@ -247,35 +248,54 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
 
             $this->log( sprintf(
                 '[USDT] Amount %s already in use, retrying (%d/%d)',
-                $candidate, $i + 1, $max_tries
+                $candidate,
+                $i + 1,
+                $max_tries
             ) );
         }
 
-        // Fallback: derive suffix from microseconds — still goes through the
-        // collision check so there is no code path that skips it.
-        $usec      = (int) round( microtime( true ) * 10000 ) % 10000;
-        $ts_suffix = str_pad( (string) max( 1, $usec ), 4, '0', STR_PAD_LEFT );
-        $fallback  = $this->normalise_usdt_amount( $base2 . $ts_suffix );
+        // Fallback: use milliseconds to generate another 1–999 suffix.
+        $usec = (int) round( microtime( true ) * 1000 ) % 1000;
+        $usec = max( 1, $usec );
 
-        if ( ! $this->unique_amount_in_use( $fallback, $order->get_id() ) ) {
+        $fallback = $this->normalise_usdt_amount(
+            $whole - ( $usec / 1000000 )
+        );
+
+        if (
+            $fallback > 0 &&
+            $fallback < $whole &&
+            ! $this->unique_amount_in_use( $fallback, $order->get_id() )
+        ) {
             return $fallback;
         }
 
-        // Absolute last resort: sequential scan through all 9999 suffixes.
-        // Practically unreachable unless > 9998 orders are pending simultaneously.
-        for ( $n = 1; $n <= 9999; $n++ ) {
+        // Absolute last resort: scan all 999 possible suffixes.
+        for ( $n = 1; $n <= 999; $n++ ) {
             $candidate = $this->normalise_usdt_amount(
-                $base2 . str_pad( (string) $n, 4, '0', STR_PAD_LEFT )
+                $whole - ( $n / 1000000 )
             );
-            if ( ! $this->unique_amount_in_use( $candidate, $order->get_id() ) ) {
-                $this->log( '[USDT] Exhaustive suffix scan needed; found unique amount: ' . $candidate );
+
+            if (
+                $candidate > 0 &&
+                $candidate < $whole &&
+                ! $this->unique_amount_in_use( $candidate, $order->get_id() )
+            ) {
+                $this->log(
+                    '[USDT] Exhaustive suffix scan needed; found unique amount: ' . $candidate
+                );
+
                 return $candidate;
             }
         }
 
-        // Should never be reached.  Log a critical error and surface it.
-        $this->log( '[USDT] CRITICAL: could not generate a unique amount for order #' . $order->get_id() );
-        return $base2 . '0001';  // return something rather than crashing
+        // Should never be reached unless all 999 amounts are already in use.
+        $this->log(
+            '[USDT] CRITICAL: could not generate a unique amount for order #' .
+            $order->get_id()
+        );
+
+        return $this->normalise_usdt_amount( $whole - 0.000001 );
     }
 
     /**
