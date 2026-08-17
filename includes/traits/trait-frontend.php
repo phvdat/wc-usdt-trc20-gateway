@@ -108,24 +108,28 @@ trait WC_USDT_TRC20_Frontend {
             </div>
 
             <div class="wc-usdt-trc20-tabs" role="tablist" aria-label="<?php echo esc_attr__( 'Payment method', 'wc-usdt-trc20' ); ?>">
-              <?php if ( $binance_qr_url ) : ?>
                 <button type="button" class="wc-usdt-trc20-tab is-active" role="tab"
-                        aria-selected="true" aria-controls="wc-usdt-tab-binance" data-tab="binance">
-                  <?php echo esc_html__( 'Binance', 'wc-usdt-trc20' ); ?>
+                        aria-selected="true"
+                        aria-controls="wc-usdt-tab-wallet"
+                        data-tab="wallet">
+                    <?php echo esc_html__( 'Pay with Crypto', 'wc-usdt-trc20' ); ?>
                 </button>
-              <?php endif; ?>
-              <button type="button"
-                      class="wc-usdt-trc20-tab<?php echo $binance_qr_url ? '' : ' is-active'; ?>"
-                      role="tab"
-                      aria-selected="<?php echo $binance_qr_url ? 'false' : 'true'; ?>"
-                      aria-controls="wc-usdt-tab-wallet"
-                      data-tab="wallet">
-                <?php echo esc_html__( 'Other wallets', 'wc-usdt-trc20' ); ?>
-              </button>
+
+                <?php if ( $binance_qr_url ) : ?>
+                    <button type="button" class="wc-usdt-trc20-tab" role="tab"
+                            aria-selected="false"
+                            aria-controls="wc-usdt-tab-binance"
+                            data-tab="binance">
+                        <?php echo esc_html__( 'Binance', 'wc-usdt-trc20' ); ?>
+                    </button>
+                <?php endif; ?>
             </div>
 
             <?php if ( $binance_qr_url ) : ?>
-              <div id="wc-usdt-tab-binance" class="wc-usdt-trc20-tab-panel is-active" data-panel="binance" role="tabpanel">
+              <div id="wc-usdt-tab-binance"
+                  class="wc-usdt-trc20-tab-panel"
+                  data-panel="binance"
+                  role="tabpanel">
                 <h3><?php echo esc_html__( 'Pay with Binance', 'wc-usdt-trc20' ); ?></h3>
                 <p class="wc-usdt-trc20-instruction">
                   <?php echo esc_html__( 'Scan the QR with the Binance app. Make sure the payment is sent as USDT on TRON (TRC20) for the exact amount shown above.', 'wc-usdt-trc20' ); ?>
@@ -137,10 +141,10 @@ trait WC_USDT_TRC20_Frontend {
             <?php endif; ?>
 
             <div id="wc-usdt-tab-wallet"
-                 class="wc-usdt-trc20-tab-panel<?php echo $binance_qr_url ? '' : ' is-active'; ?>"
-                 data-panel="wallet"
-                 role="tabpanel">
-              <h3><?php echo esc_html__( 'Pay with another wallet', 'wc-usdt-trc20' ); ?></h3>
+                class="wc-usdt-trc20-tab-panel is-active"
+                data-panel="wallet"
+                role="tabpanel">
+              <h3><?php echo esc_html__( 'Pay with Crypto', 'wc-usdt-trc20' ); ?></h3>
               <p class="wc-usdt-trc20-instruction">
                 <?php echo esc_html__( 'Send USDT to the receiving address below using the TRON (TRC20) network.', 'wc-usdt-trc20' ); ?>
               </p>
@@ -163,6 +167,19 @@ trait WC_USDT_TRC20_Frontend {
                   <strong><?php echo esc_html( $display_amount ); ?> USDT</strong>
                 </div>
               </div>
+              <?php if ( ! $txid ) : ?>
+                <div class="wc-usdt-trc20-verify">
+                  <h3><?php echo esc_html__( 'Already paid?', 'wc-usdt-trc20' ); ?></h3>
+                  <p><?php echo esc_html__( 'If you have completed the transfer, paste your Transaction ID (TXID) below. We will verify it directly on the TRON blockchain.', 'wc-usdt-trc20' ); ?></p>
+                  <label for="wc-usdt-trc20-txid-input"><?php echo esc_html__( 'Transaction ID (TXID)', 'wc-usdt-trc20' ); ?></label>
+                  <input id="wc-usdt-trc20-txid-input" type="text" autocomplete="off" spellcheck="false"
+                        placeholder="<?php echo esc_attr__( 'Paste your TRON transaction ID', 'wc-usdt-trc20' ); ?>">
+                  <button type="button" class="button wc-usdt-trc20-verify-button">
+                    <?php echo esc_html__( 'Verify payment', 'wc-usdt-trc20' ); ?>
+                  </button>
+                  <div class="wc-usdt-trc20-verify-result" aria-live="polite"></div>
+                </div>
+              <?php endif; ?>
             </div>
 
             <p class="wc-usdt-trc20-warning">
@@ -170,19 +187,6 @@ trait WC_USDT_TRC20_Frontend {
               <?php echo esc_html__( 'Send USDT on TRON (TRC20) only. Sending another token or using another network will not be recognized automatically.', 'wc-usdt-trc20' ); ?>
             </p>
 
-            <?php if ( ! $txid ) : ?>
-              <div class="wc-usdt-trc20-verify">
-                <h3><?php echo esc_html__( 'Already paid?', 'wc-usdt-trc20' ); ?></h3>
-                <p><?php echo esc_html__( 'If you have completed the transfer, paste your Transaction ID (TXID) below. We will verify it directly on the TRON blockchain.', 'wc-usdt-trc20' ); ?></p>
-                <label for="wc-usdt-trc20-txid-input"><?php echo esc_html__( 'Transaction ID (TXID)', 'wc-usdt-trc20' ); ?></label>
-                <input id="wc-usdt-trc20-txid-input" type="text" autocomplete="off" spellcheck="false"
-                       placeholder="<?php echo esc_attr__( 'Paste your TRON transaction ID', 'wc-usdt-trc20' ); ?>">
-                <button type="button" class="button wc-usdt-trc20-verify-button">
-                  <?php echo esc_html__( 'Verify payment', 'wc-usdt-trc20' ); ?>
-                </button>
-                <div class="wc-usdt-trc20-verify-result" aria-live="polite"></div>
-              </div>
-            <?php endif; ?>
           </div>
         </section>
         <?php
