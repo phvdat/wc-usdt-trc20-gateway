@@ -1,0 +1,158 @@
+.wc-usdt-trc20-payment{margin:24px 0}.wc-usdt-trc20-card{max-width:560px;margin:auto;padding:24px;border:1px solid #ddd;border-radius:12px;background:#fff;text-align:center}.wc-usdt-trc20-card h2{margin-top:0}.wc-usdt-trc20-status{padding:14px;margin:16px 0;border-radius:8px;background:#f6f7f7}.wc-usdt-trc20-status strong,.wc-usdt-trc20-status span{display:block}.wc-usdt-trc20-status span{margin-top:5px}.wc-usdt-trc20-status[data-state=paid]{background:#ecfdf3}.wc-usdt-trc20-txid{display:block;margin-top:8px;word-break:break-all}.wc-usdt-trc20-amount{margin:20px 0}.wc-usdt-trc20-amount span{display:block}.wc-usdt-trc20-amount strong{display:block;font-size:28px;margin-top:5px}.wc-usdt-trc20-network{margin-bottom:18px}.wc-usdt-trc20-qr-wrap{margin:18px 0}.wc-usdt-trc20-qr{display:inline-flex;min-width:240px;min-height:240px;align-items:center;justify-content:center;background:#fff;border:1px solid #eee}.wc-usdt-trc20-qr img{display:block}.wc-usdt-trc20-qr-fallback{padding:20px}.wc-usdt-trc20-qr-wrap small{display:block;margin-top:8px}.wc-usdt-trc20-address{text-align:left;margin:18px 0}.wc-usdt-trc20-address label{display:block;font-weight:600;margin-bottom:6px}.wc-usdt-trc20-address code{display:block;word-break:break-all;padding:10px;background:#f6f7f7;border-radius:6px}.wc-usdt-trc20-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.wc-usdt-trc20-warning{font-size:13px;margin-top:18px}.wc-usdt-trc20-qr-help{font-size:13px;margin:12px auto;max-width:520px}.wc-usdt-trc20-qr-wrap{display:flex;flex-direction:column;align-items:center}
+.wc-usdt-trc20-binance{margin:20px 0;padding:18px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;text-align:center}
+.wc-usdt-trc20-binance h3{margin:0 0 8px}
+.wc-usdt-trc20-binance p{font-size:13px}
+.wc-usdt-trc20-binance-qr{display:block;width:min(100%,420px);height:auto;margin:12px auto;border-radius:8px}
+.wc-usdt-trc20-binance-note{font-size:12px!important;color:#8a5a00}
+
+.wc-usdt-trc20-amount-box{margin:20px 0;padding:18px;border:2px solid #111827;border-radius:10px;background:#fff}
+.wc-usdt-trc20-amount-box span{display:block;font-size:13px;font-weight:600}
+.wc-usdt-trc20-amount-box strong{display:block;font-size:32px;line-height:1.2;margin:6px 0 10px}
+.wc-usdt-trc20-amount-box small{display:block;margin-top:8px;color:#666}
+.wc-usdt-trc20-copy-amount{margin-top:4px}
+.wc-usdt-trc20-wallet{margin-top:24px}
+.wc-usdt-trc20-wallet h3{margin-bottom:8px}
+.wc-usdt-trc20-binance{margin:24px 0;padding:20px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;text-align:center}
+.wc-usdt-trc20-binance h3{margin:0 0 8px}
+.wc-usdt-trc20-binance-qr{display:block;width:min(100%,420px);height:auto;margin:14px auto}
+.wc-usdt-trc20-binance-note{font-size:12px!important;color:#8a5a00}
+
+/* v0.2.0 clean payment tabs */
+.wc-usdt-trc20-tabs{display:flex;gap:6px;margin:24px 0 0;border-bottom:1px solid #e5e7eb}
+.wc-usdt-trc20-tab{appearance:none;border:0;background:transparent;padding:12px 18px;margin:0;cursor:pointer;font-weight:600;border-bottom:2px solid transparent}
+.wc-usdt-trc20-tab.is-active{border-bottom-color:#111827;color:#111827}
+.wc-usdt-trc20-tab-panel{display:none;padding:24px 4px 8px;text-align:center}
+.wc-usdt-trc20-tab-panel.is-active{display:block}
+.wc-usdt-trc20-tab-panel h3{margin:0 0 8px}
+.wc-usdt-trc20-instruction{max-width:560px;margin:0 auto 18px}
+.wc-usdt-trc20-address-qr{display:flex;justify-content:center;align-items:center;min-height:220px;margin:12px auto 20px}
+.wc-usdt-trc20-address-qr img{max-width:280px;height:auto}
+.wc-usdt-trc20-binance-qr{display:block;width:min(100%,420px);height:auto;margin:18px auto}
+.wc-usdt-trc20-network{margin:14px 0;padding:10px 12px;border-radius:7px;background:#f6f7f8}
+.wc-usdt-trc20-note{font-size:12px;color:#666}
+.wc-usdt-trc20-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+
+/* v0.2.1 payment UI cleanup */
+.wc-usdt-trc20-card{max-width:680px;margin:24px auto;padding:24px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;box-sizing:border-box}
+.wc-usdt-trc20-card h2{text-align:center;margin:0 0 18px;font-size:24px}
+.wc-usdt-trc20-status{text-align:center;padding:12px 14px;margin-bottom:18px;border-radius:9px;background:#f7f7f8}
+.wc-usdt-trc20-status strong,.wc-usdt-trc20-status span{display:block}
+.wc-usdt-trc20-status span{margin-top:3px;color:#666;font-size:13px}
+.wc-usdt-trc20-amount-box{text-align:center!important;margin:0 0 20px!important;padding:20px!important;border:1px solid #e5e7eb!important;border-radius:12px!important;background:#fafafa!important}
+.wc-usdt-trc20-amount-box span{display:block!important;font-size:13px!important;color:#666!important}
+.wc-usdt-trc20-amount-box strong{display:block!important;font-size:30px!important;line-height:1.25!important;margin:6px 0 12px!important}
+.wc-usdt-trc20-amount-box .wc-usdt-trc20-copy-amount{display:block!important;margin:0 auto!important;padding:7px 14px!important;font-size:13px!important;line-height:1.2!important;min-height:auto!important}
+.wc-usdt-trc20-tabs{display:flex!important;justify-content:center!important;gap:0!important;margin:0!important;border:1px solid #ddd!important;border-radius:9px!important;padding:3px!important;background:#f5f5f6!important}
+.wc-usdt-trc20-tab{flex:1!important;max-width:220px!important;border:0!important;border-radius:7px!important;padding:10px 14px!important;background:transparent!important;color:#555!important}
+.wc-usdt-trc20-tab.is-active{background:#fff!important;color:#111!important;box-shadow:0 1px 4px rgba(0,0,0,.08)!important;border:0!important}
+.wc-usdt-trc20-tab-panel{padding:24px 4px 8px!important}
+.wc-usdt-trc20-tab-panel h3{text-align:center!important}
+.wc-usdt-trc20-instruction{text-align:center!important;color:#555!important;line-height:1.5!important}
+.wc-usdt-trc20-binance-qr{width:min(100%,340px)!important;margin:18px auto!important}
+.wc-usdt-trc20-address-qr{margin:18px auto!important}
+.wc-usdt-trc20-network{text-align:center!important;font-size:13px!important}
+.wc-usdt-trc20-address{text-align:center!important;margin-top:18px!important}
+.wc-usdt-trc20-address label{display:block!important;font-size:12px!important;color:#666!important;margin-bottom:6px!important}
+.wc-usdt-trc20-address code{display:block!important;word-break:break-all!important;font-size:12px!important;padding:10px!important;background:#f7f7f8!important;border-radius:7px!important}
+.wc-usdt-trc20-actions{display:flex!important;justify-content:center!important;gap:8px!important;margin-top:10px!important}
+.wc-usdt-trc20-actions .button{padding:7px 13px!important;min-height:auto!important;font-size:12px!important}
+.wc-usdt-trc20-warning{text-align:center!important;font-size:12px!important;color:#777!important;line-height:1.5!important;margin:20px 0 0!important}
+@media(max-width:600px){
+  .wc-usdt-trc20-card{padding:18px;margin:15px 8px}
+  .wc-usdt-trc20-amount-box strong{font-size:26px!important}
+}
+
+/* v0.2.3: no QR in Other wallets; clean address/amount layout */
+.wc-usdt-trc20-address-box{text-align:center;margin:20px auto;max-width:560px}
+.wc-usdt-trc20-address-box label{display:block;font-size:12px;color:#666;margin-bottom:7px}
+.wc-usdt-trc20-address-box code{display:block;word-break:break-all;background:#f7f7f8;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:12px;line-height:1.5}
+.wc-usdt-trc20-address-box .button{display:block;margin:10px auto 0;padding:7px 13px;font-size:12px;min-height:auto}
+.wc-usdt-trc20-copy-amount-bottom{display:block!important;margin:14px auto 0!important;padding:7px 13px!important;font-size:12px!important;min-height:auto!important}
+
+/* v0.2.4 */
+.wc-usdt-trc20-status[data-state="paid"]{
+  background:#ecfdf3!important;
+  border:1px solid #b7ebc6!important;
+}
+.wc-usdt-trc20-status[data-state="paid"] .wc-usdt-trc20-status-title{
+  color:#15803d!important;
+}
+.wc-usdt-trc20-status[data-state="waiting"] .wc-usdt-trc20-status-title{
+  color:#4b5563!important;
+}
+.wc-usdt-trc20-tabs{
+  background:#f1f3f5!important;
+  border:1px solid #d8dde3!important;
+  padding:4px!important;
+}
+.wc-usdt-trc20-tab{
+  color:#5b616b!important;
+  font-weight:600!important;
+  transition:all .18s ease!important;
+  cursor:pointer!important;
+}
+.wc-usdt-trc20-tab:hover{
+  color:#111827!important;
+  background:#e7eaee!important;
+}
+.wc-usdt-trc20-tab.is-active{
+  background:#111827!important;
+  color:#fff!important;
+  box-shadow:0 2px 7px rgba(17,24,39,.22)!important;
+}
+.wc-usdt-trc20-payment-details{
+  max-width:620px;
+  margin:18px auto 0;
+  border:1px solid #e5e7eb;
+  border-radius:9px;
+  overflow:hidden;
+  background:#fff;
+}
+.wc-usdt-trc20-detail-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:18px;
+  padding:12px 14px;
+  border-bottom:1px solid #edf0f2;
+  font-size:13px;
+}
+.wc-usdt-trc20-detail-row:last-child{border-bottom:0}
+.wc-usdt-trc20-detail-row span{color:#6b7280}
+.wc-usdt-trc20-detail-row strong{text-align:right;color:#202124}
+.wc-usdt-trc20-txid{
+  display:block!important;
+  margin-top:8px!important;
+  word-break:break-all!important;
+}
+@media(max-width:600px){
+  .wc-usdt-trc20-detail-row{display:block}
+  .wc-usdt-trc20-detail-row span{display:block;margin-bottom:4px}
+  .wc-usdt-trc20-detail-row strong{display:block;text-align:left}
+}
+
+/* v0.2.5: exact-amount matching + customer TXID verification */
+.wc-usdt-trc20-verify{margin:22px auto 0;padding:18px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;text-align:center;max-width:620px}
+.wc-usdt-trc20-verify h3{margin:0 0 7px!important;text-align:center!important}
+.wc-usdt-trc20-verify p{margin:0 0 13px;color:#666;font-size:13px;line-height:1.5}
+.wc-usdt-trc20-verify label{display:block;text-align:left;font-size:12px;font-weight:600;color:#555;margin-bottom:5px}
+.wc-usdt-trc20-verify input{display:block;width:100%;box-sizing:border-box;padding:10px 11px;border:1px solid #d9dde3;border-radius:7px;background:#fff;font-family:monospace;font-size:12px}
+.wc-usdt-trc20-verify-button{display:block!important;margin:10px auto 0!important;padding:8px 14px!important;min-height:auto!important;font-size:13px!important}
+.wc-usdt-trc20-verify-result{margin-top:10px;font-size:12px;line-height:1.5}
+.wc-usdt-trc20-verify-result[data-state="error"]{color:#b42318}
+.wc-usdt-trc20-verify-result[data-state="success"]{color:#15803d;font-weight:600}
+.wc-usdt-trc20-verify-result[data-state="checking"]{color:#666}
+
+
+/* v0.2.6 */
+/* Hide WooCommerce's repeated order overview on this USDT thank-you page. */
+.woocommerce-order-received .woocommerce-order-overview{display:none!important}
+
+.wc-usdt-trc20-status{position:relative;overflow:hidden;transition:background .25s ease,border-color .25s ease}
+.wc-usdt-trc20-status[data-state="waiting"]{background:#f8fafc!important;border:1px solid #e5e7eb!important}
+.wc-usdt-trc20-waiting-indicator{display:flex;justify-content:center;align-items:center;gap:5px;height:18px;margin:0 0 5px}
+.wc-usdt-trc20-waiting-indicator i{display:block;width:6px;height:6px;border-radius:50%;background:#6b7280;animation:wc-usdt-bounce 1.2s infinite ease-in-out}
+.wc-usdt-trc20-waiting-indicator i:nth-child(2){animation-delay:.15s}
+.wc-usdt-trc20-waiting-indicator i:nth-child(3){animation-delay:.3s}
+@keyframes wc-usdt-bounce{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-6px);opacity:1}}
+.wc-usdt-trc20-status[data-state="paid"] .wc-usdt-trc20-waiting-indicator{display:none}
