@@ -40,10 +40,6 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
     const META_CREATED = '_usdt_trc20_created';
     const META_MATCHED = '_usdt_trc20_matched';
 
-    const TOKEN_CONTRACT_MAINNET = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-    const TOKEN_CONTRACT_NILE    = 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf';
-    const TOKEN_CONTRACT_SHASTA  = 'TDZDd58a44n5Bvg7pfpcdWhZpv7XSt9PsU';
-
     // -------------------------------------------------------------------------
     // Properties
     // -------------------------------------------------------------------------
@@ -56,9 +52,7 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
     private $wallet_address    = '';
     private $trongrid_api_key  = '';
     private $network           = 'mainnet';
-    private $confirmations     = 19;
     private $timeout_minutes   = 60;
-    private $amount_suffix     = false;
     private $debug             = false;
 
     // -------------------------------------------------------------------------
@@ -78,7 +72,6 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
         $this->wallet_address   = trim( $this->get_option( 'wallet_address',   '' ) );
         $this->trongrid_api_key = trim( $this->get_option( 'trongrid_api_key', '' ) );
         $this->network          = $this->get_option( 'network',          'mainnet' );
-        $this->confirmations    = max( 0, absint( $this->get_option( 'confirmations',    19 ) ) );
         $this->timeout_minutes  = max( 5, absint( $this->get_option( 'timeout_minutes',  60 ) ) );
         $this->debug            = $this->get_option( 'debug', 'no' ) === 'yes';
 
@@ -141,13 +134,6 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
                 'description' => 'Required on Mainnet. Testnet TronGrid endpoints currently do not require an API key.',
                 'desc_tip'    => true,
             ],
-            'confirmations' => [
-                'title'             => 'Required confirmations',
-                'type'              => 'number',
-                'default'           => 19,
-                'custom_attributes' => [ 'min' => 0, 'step' => 1 ],
-                'description'       => 'Only confirmed transfers are considered.',
-            ],
             'timeout_minutes' => [
                 'title'             => 'Payment timeout (minutes)',
                 'type'              => 'number',
@@ -198,7 +184,13 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
             return [ 'result' => 'failure' ];
         }
 
-        $amount = $this->make_unique_amount( $order );
+        // Generate the unique payment amount exactly once per order.
+        // If META_AMOUNT already exists (e.g. customer is retrying payment),
+        // keep the original value so the customer's instructions never change.
+        $amount = $order->get_meta( self::META_AMOUNT );
+        if ( ! $amount ) {
+            $amount = $this->make_unique_amount( $order );
+        }
 
         $order->update_meta_data( self::META_AMOUNT,  $amount );
         $order->update_meta_data( self::META_ADDRESS, $this->wallet_address );
@@ -215,14 +207,142 @@ class WC_Gateway_USDT_TRC20 extends WC_Payment_Gateway {
     }
 
     /**
-     * Return the exact order total as a USDT amount string (6 decimal places,
-     * trailing zeros stripped). Payments are matched by amount + address + TX time.
+     * Generate a unique USDT payment amount for this order.
+     *
+     * A 4-digit random suffix is appended at decimal places 3–6, making the
+     * amount distinguishable on-chain while keeping the visible cents unchanged.
+     *
+     * Example: order total 8.99  →  stored unique amount 8.990017
+     *
+     * Rules:
+     * - The WooCommerce order total is NEVER modified.
+     * - META_AMOUNT is written once (in process_payment) and never changed
+     *   afterwards; if it already exists this function is not called again.
+     * - Every candidate is checked against all active (pending/on-hold) orders
+     *   before being accepted, including the timestamp-based fallback.
+     * - Trailing zeros beyond the 2nd decimal place are stripped; the 2nd
+     *   decimal place is always kept so "8.990000" displays as "8.99".
      *
      * @param  WC_Order $order
-     * @return string
+     * @return string   Unique USDT amount string, e.g. "8.990017"
      */
     private function make_unique_amount( $order ) {
-        return rtrim( rtrim( number_format( (float) $order->get_total(), 6, '.', '' ), '0' ), '.' );
+        // Truncate (not round) to 2 decimal places to match the displayed total.
+        $base  = (float) $order->get_total();
+        $whole = floor( $base * 100 ) / 100;      // e.g. 8.99
+        $base2 = number_format( $whole, 2, '.', '' );  // "8.99"
+
+        $max_tries = 20;
+
+        for ( $i = 0; $i < $max_tries; $i++ ) {
+            // 4-digit suffix occupying decimal places 3–6.
+            // Range 0001–9999 ensures the suffix is never all-zeros (which
+            // would make the unique amount equal to the bare order total).
+            $suffix    = str_pad( (string) wp_rand( 1, 9999 ), 4, '0', STR_PAD_LEFT );
+            $candidate = $this->normalise_usdt_amount( $base2 . $suffix );
+
+            if ( ! $this->unique_amount_in_use( $candidate, $order->get_id() ) ) {
+                return $candidate;
+            }
+
+            $this->log( sprintf(
+                '[USDT] Amount %s already in use, retrying (%d/%d)',
+                $candidate, $i + 1, $max_tries
+            ) );
+        }
+
+        // Fallback: derive suffix from microseconds — still goes through the
+        // collision check so there is no code path that skips it.
+        $usec      = (int) round( microtime( true ) * 10000 ) % 10000;
+        $ts_suffix = str_pad( (string) max( 1, $usec ), 4, '0', STR_PAD_LEFT );
+        $fallback  = $this->normalise_usdt_amount( $base2 . $ts_suffix );
+
+        if ( ! $this->unique_amount_in_use( $fallback, $order->get_id() ) ) {
+            return $fallback;
+        }
+
+        // Absolute last resort: sequential scan through all 9999 suffixes.
+        // Practically unreachable unless > 9998 orders are pending simultaneously.
+        for ( $n = 1; $n <= 9999; $n++ ) {
+            $candidate = $this->normalise_usdt_amount(
+                $base2 . str_pad( (string) $n, 4, '0', STR_PAD_LEFT )
+            );
+            if ( ! $this->unique_amount_in_use( $candidate, $order->get_id() ) ) {
+                $this->log( '[USDT] Exhaustive suffix scan needed; found unique amount: ' . $candidate );
+                return $candidate;
+            }
+        }
+
+        // Should never be reached.  Log a critical error and surface it.
+        $this->log( '[USDT] CRITICAL: could not generate a unique amount for order #' . $order->get_id() );
+        return $base2 . '0001';  // return something rather than crashing
+    }
+
+    /**
+     * Normalise a raw 6-decimal amount string.
+     *
+     * Input:  "8.99" + "0017"  →  concat = "8.990017"
+     * Output: "8.990017"  (trailing zeros stripped after 2nd decimal place)
+     *
+     * Input:  "8.99" + "1000"  →  concat = "8.991000"
+     * Output: "8.991"          (not "8.9910" — both have the same micro-unit value)
+     *
+     * The 2nd decimal place is always preserved so the displayed amount never
+     * loses the cents portion of the original order total.
+     *
+     * @param  string $raw  e.g. "8.990017"
+     * @return string
+     */
+    private function normalise_usdt_amount( $raw ) {
+        if ( strpos( $raw, '.' ) === false ) {
+            return $raw . '.00';
+        }
+        [ $integer, $frac ] = explode( '.', $raw, 2 );
+        $frac = substr( $frac, 0, 6 );                   // cap at 6 decimal places
+        $frac = str_pad( $frac, 2, '0' );                // ensure at least 2 places
+        $frac = rtrim( $frac, '0' );                      // strip trailing zeros
+        $frac = str_pad( $frac, 2, '0' );                // but keep minimum 2 places
+        return $integer . '.' . $frac;
+    }
+
+    /**
+     * Check whether a given USDT amount is already assigned to another
+     * active (pending or on-hold) order for this gateway.
+     *
+     * Comparison is done using to_units() (integer micro-USDT) so that
+     * "8.991" and "8.9910" are treated as the same amount regardless of how
+     * the value was stored in the database.
+     *
+     * Only the current order ($order_id) is excluded from the check.
+     *
+     * @param  string $amount   Candidate unique amount string.
+     * @param  int    $order_id The current order ID (excluded from the check).
+     * @return bool
+     */
+    private function unique_amount_in_use( $amount, $order_id ) {
+        $target_units = $this->to_units( $amount );
+
+        // Fetch all active USDT orders except the current one.
+        // We pull IDs only and then compare amounts as integers to be safe
+        // against any trailing-zero variants that may exist in the database.
+        $active_orders = wc_get_orders( [
+            'limit'          => -1,
+            'status'         => [ 'pending', 'on-hold' ],
+            'payment_method' => $this->id,
+            'return'         => 'objects',
+            'exclude'        => [ absint( $order_id ) ],
+        ] );
+
+        foreach ( $active_orders as $order ) {
+            $stored = $order->get_meta( self::META_AMOUNT );
+            if ( $stored !== '' && $stored !== false && $stored !== null ) {
+                if ( $this->to_units( (string) $stored ) === $target_units ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     // -------------------------------------------------------------------------

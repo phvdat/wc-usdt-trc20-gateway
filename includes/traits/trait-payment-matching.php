@@ -14,6 +14,10 @@ trait WC_USDT_TRC20_Payment_Matching {
     /**
      * Scan all pending USDT orders and attempt to match them with confirmed
      * on-chain transfers. Called once per cron tick.
+     *
+     * Because each order now carries a UNIQUE payment amount, matching is
+     * always unambiguous: find a TX whose amount equals the order's stored
+     * META_AMOUNT, within the order's time window.
      */
     public function scan_and_match() {
         $pending_orders = wc_get_orders( [
@@ -29,12 +33,13 @@ trait WC_USDT_TRC20_Payment_Matching {
             return;
         }
 
-        $now             = time();
-        $oldest_allowed  = $now - ( $this->timeout_minutes * 60 );
-        $orders_by_amount = [];
-        $order_created    = [];
+        $now            = time();
+        $oldest_allowed = $now - ( $this->timeout_minutes * 60 );
+        $active_orders  = [];   // order_id => [ 'order', 'created', 'units' ]
+        $scan_from_ts   = PHP_INT_MAX;
 
         foreach ( $pending_orders as $order ) {
+            // Skip orders already matched.
             if ( $order->get_meta( self::META_TXID ) ) {
                 continue;
             }
@@ -44,8 +49,8 @@ trait WC_USDT_TRC20_Payment_Matching {
                 $date    = $order->get_date_created();
                 $created = $date ? $date->getTimestamp() : $now;
             }
-            $order_created[ $order->get_id() ] = $created;
 
+            // Expire timed-out orders.
             if ( $created < $oldest_allowed ) {
                 $order->update_status( 'failed', __( 'USDT payment timed out.', 'wc-usdt-trc20' ) );
                 continue;
@@ -56,19 +61,28 @@ trait WC_USDT_TRC20_Payment_Matching {
                 continue;
             }
 
-            $key                      = $this->to_units( $amount );
-            $orders_by_amount[ $key ][] = $order;
+            $active_orders[ $order->get_id() ] = [
+                'order'   => $order,
+                'created' => $created,
+                'units'   => $this->to_units( $amount ),
+            ];
+
+            if ( $created < $scan_from_ts ) {
+                $scan_from_ts = $created;
+            }
         }
 
-        if ( ! $orders_by_amount ) {
+        if ( ! $active_orders ) {
             return;
         }
 
-        $scan_from    = min( $order_created ?: [ $now ] );
-        $transactions = $this->fetch_transactions( $scan_from );
+        // Build a lookup: amount_units => order_id (unique — one order per amount).
+        $units_to_order = [];
+        foreach ( $active_orders as $oid => $data ) {
+            $units_to_order[ $data['units'] ] = $oid;
+        }
 
-        // Build map: amount_units => [ valid TX entries ]
-        $txs_by_amount = [];
+        $transactions = $this->fetch_transactions( $scan_from_ts );
 
         foreach ( $transactions as $tx ) {
             if ( ! $this->is_valid_inbound_usdt( $tx ) ) {
@@ -84,151 +98,53 @@ trait WC_USDT_TRC20_Payment_Matching {
                 continue;
             }
 
-            $units = $this->to_units( $this->transaction_amount( $tx ) );
-            if ( ! isset( $orders_by_amount[ $units ] ) ) {
+            $tx_units = $this->to_units( $this->transaction_amount( $tx ) );
+            if ( ! isset( $units_to_order[ $tx_units ] ) ) {
+                // No active order expects this exact amount — ignore.
                 continue;
             }
 
-            if ( ! $this->transaction_timestamp( $tx ) ) {
+            $oid     = $units_to_order[ $tx_units ];
+            $data    = $active_orders[ $oid ];
+            $order   = $data['order'];
+            $created = $data['created'];
+            $ts      = $this->transaction_timestamp( $tx );
+            $deadline = $created + ( $this->timeout_minutes * 60 );
+
+            if ( ! $ts ) {
                 continue;
             }
 
-            $txs_by_amount[ $units ][] = $tx;
-        }
-
-        // Match per amount group
-        foreach ( $txs_by_amount as $units => $txs ) {
-            $this->match_amount_group( $units, $txs, $orders_by_amount, $order_created );
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Internal helpers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Attempt to pair transactions with orders that share the same USDT amount.
-     *
-     * To remain deterministic:
-     * - Both orders and transactions are sorted by timestamp ASC.
-     * - If fewer TXs than orders exist in the group, none are matched (ambiguous).
-     *
-     * @param int   $units            Amount expressed in micro-USDT units.
-     * @param array $txs              Candidate transactions for this amount.
-     * @param array $orders_by_amount Map of amount_units => WC_Order[].
-     * @param array $order_created    Map of order_id => creation timestamp.
-     */
-    private function match_amount_group( $units, $txs, $orders_by_amount, $order_created ) {
-        $group_orders = $orders_by_amount[ $units ];
-
-        $earliest_order_created = PHP_INT_MAX;
-        foreach ( $group_orders as $o ) {
-            $c = $order_created[ $o->get_id() ] ?? 0;
-            if ( $c < $earliest_order_created ) {
-                $earliest_order_created = $c;
-            }
-        }
-
-        // Keep only TXs that arrived at or after the earliest order.
-        $valid_txs = array_filter( $txs, function ( $tx ) use ( $earliest_order_created ) {
-            return $this->transaction_timestamp( $tx ) >= $earliest_order_created;
-        } );
-        $valid_txs = array_values( $valid_txs );
-
-        if ( ! $valid_txs ) {
-            return;
-        }
-
-        $order_count = count( $group_orders );
-        $tx_count    = count( $valid_txs );
-
-        if ( $tx_count < $order_count ) {
-            $this->log( sprintf(
-                '[USDT][AUTO] Ambiguous amount group %s USDT: %d order(s) but only %d valid TX(s). Waiting.',
-                $this->transaction_amount( $valid_txs[0] ),
-                $order_count,
-                $tx_count
-            ) );
-            return;
-        }
-
-        // Sort TXs ASC, orders ASC — pair by index.
-        usort( $valid_txs, function ( $a, $b ) {
-            return $this->transaction_timestamp( $a ) - $this->transaction_timestamp( $b );
-        } );
-
-        $sorted_orders = $group_orders;
-        usort( $sorted_orders, function ( $a, $b ) use ( $order_created ) {
-            return ( $order_created[ $a->get_id() ] ?? 0 ) - ( $order_created[ $b->get_id() ] ?? 0 );
-        } );
-
-        for ( $i = 0; $i < $order_count; $i++ ) {
-            $candidate = $sorted_orders[ $i ];
-            $tx        = $valid_txs[ $i ];
-            $created   = $order_created[ $candidate->get_id() ] ?? 0;
-            $ts        = $this->transaction_timestamp( $tx );
-            $deadline  = $created + ( $this->timeout_minutes * 60 );
-
+            // Timestamp must fall within the order's payment window.
             if ( $ts < $created || $ts > $deadline ) {
                 $this->log( sprintf(
                     '[USDT][AUTO] TX %s timestamp %s outside window for order #%d [%s – %s]. Skipping.',
-                    sanitize_text_field( $tx['transaction_id'] ),
+                    $txid,
                     gmdate( 'c', $ts ),
-                    $candidate->get_id(),
+                    $oid,
                     gmdate( 'c', $created ),
                     gmdate( 'c', $deadline )
                 ) );
                 continue;
             }
 
-            $txid = sanitize_text_field( $tx['transaction_id'] );
+            // Final duplicate guard before writing.
             if ( $this->txid_already_used( $txid ) ) {
-                $this->log( '[USDT][AUTO] TX ' . $txid . ' was claimed by another order before pairing. Skipping.' );
+                $this->log( '[USDT][AUTO] TX ' . $txid . ' claimed by another order before pairing. Skipping.' );
                 continue;
             }
 
-            $this->mark_paid( $candidate, $tx );
+            $this->mark_paid( $order, $tx );
+
+            // Remove from the lookup so we don't process the same order twice
+            // if a duplicate TX somehow appears in the API response.
+            unset( $units_to_order[ $tx_units ], $active_orders[ $oid ] );
         }
     }
 
-    /**
-     * Validate a transaction against a specific order (used by TXID submission).
-     *
-     * @param  WC_Order $order
-     * @param  array    $tx
-     * @param  int      $created Unix timestamp when the order was created.
-     * @return array{valid:bool, message:string}
-     */
-    private function validate_transaction_for_order( $order, $tx, $created ) {
-        if ( ! $this->is_valid_inbound_usdt( $tx ) ) {
-            return [
-                'valid'   => false,
-                'message' => __( 'This TXID is not a confirmed USDT TRC20 transfer to the store wallet.', 'wc-usdt-trc20' ),
-            ];
-        }
-
-        $timestamp = $this->transaction_timestamp( $tx );
-        if ( ! $timestamp || $timestamp < $created || $timestamp > ( $created + ( $this->timeout_minutes * 60 ) ) ) {
-            return [
-                'valid'   => false,
-                'message' => __( "This transaction was not made within this order's payment window.", 'wc-usdt-trc20' ),
-            ];
-        }
-
-        $expected = $this->to_units( $order->get_meta( self::META_AMOUNT ) );
-        $actual   = $this->to_units( $this->transaction_amount( $tx ) );
-        if ( $expected !== $actual ) {
-            return [
-                'valid'   => false,
-                'message' => sprintf(
-                    __( 'Amount mismatch. This order expects %s USDT.', 'wc-usdt-trc20' ),
-                    $order->get_meta( self::META_AMOUNT )
-                ),
-            ];
-        }
-
-        return [ 'valid' => true, 'message' => '' ];
-    }
+    // -------------------------------------------------------------------------
+    // Marking helpers
+    // -------------------------------------------------------------------------
 
     /**
      * Mark an order as paid and record the matching transaction.

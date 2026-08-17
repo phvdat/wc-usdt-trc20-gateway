@@ -19,15 +19,6 @@ if (!defined('WC_USDT_TRC20_PLUGIN_FILE')) {
 
 final class WC_USDT_TRC20_Plugin {
     const CRON_HOOK = 'wc_usdt_trc20_check_payments';
-    const TOKEN_DECIMALS = 6;
-    const TOKEN_CONTRACT_MAINNET = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-    const TOKEN_CONTRACT_NILE = 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf';
-    const TOKEN_CONTRACT_SHASTA = 'TDZDd58a44n5Bvg7pfpcdWhZpv7XSt9PsU';
-    const META_AMOUNT = '_usdt_trc20_amount';
-    const META_ADDRESS = '_usdt_trc20_address';
-    const META_TXID = '_usdt_trc20_txid';
-    const META_CREATED = '_usdt_trc20_created';
-    const META_MATCHED = '_usdt_trc20_matched';
 
     public static function load() {
         if (!class_exists('WooCommerce')) {
@@ -35,8 +26,6 @@ final class WC_USDT_TRC20_Plugin {
         }
         require_once __DIR__ . '/includes/class-wc-gateway-usdt-trc20.php';
 
-        // Admin notification (on-hold → processing).
-        require_once __DIR__ . '/includes/traits/trait-admin-notification.php';
         WC_Gateway_USDT_TRC20::register_admin_notification_hook();
 
         // Register AJAX handlers at plugin level. The gateway constructor is not

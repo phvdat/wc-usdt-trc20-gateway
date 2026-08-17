@@ -6,43 +6,6 @@
 trait WC_USDT_TRC20_Tron_Address {
 
     /**
-     * Convert a TRON Base58Check address to its full hex representation.
-     * Returns empty string on failure.
-     */
-    private function tron_base58_to_hex( $address ) {
-        if ( ! $address ) {
-            return '';
-        }
-        $alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-        $digits   = [ 0 ];
-        for ( $i = 0; $i < strlen( $address ); $i++ ) {
-            $pos = strpos( $alphabet, $address[ $i ] );
-            if ( $pos === false ) {
-                return '';
-            }
-            $carry = $pos;
-            for ( $j = 0; $j < count( $digits ); $j++ ) {
-                $value      = $digits[ $j ] * 58 + $carry;
-                $digits[ $j ] = $value & 0xff;
-                $carry      = intdiv( $value, 256 );
-            }
-            while ( $carry > 0 ) {
-                $digits[] = $carry & 0xff;
-                $carry    = intdiv( $carry, 256 );
-            }
-        }
-        $hex = '';
-        for ( $i = count( $digits ) - 1; $i >= 0; $i-- ) {
-            $hex .= str_pad( dechex( $digits[ $i ] ), 2, '0', STR_PAD_LEFT );
-        }
-        $leading = 0;
-        while ( $leading < strlen( $address ) && $address[ $leading ] === '1' ) {
-            $leading++;
-        }
-        return str_repeat( '00', $leading ) . $hex;
-    }
-
-    /**
      * Convert a hex-encoded TRON address (21 bytes = "41" + 20-byte pubkey hash,
      * no checksum) to Base58Check format (34-char TRON address starting with "T").
      *
