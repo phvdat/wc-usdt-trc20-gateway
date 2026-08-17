@@ -43,62 +43,87 @@ trait WC_USDT_TRC20_Tron_Address {
     }
 
     /**
-     * Convert a hex-encoded TRON address to Base58Check format.
+     * Convert a hex-encoded TRON address (21 bytes = "41" + 20-byte pubkey hash,
+     * no checksum) to Base58Check format (34-char TRON address starting with "T").
+     *
+     * TRON Base58Check = Base58( raw_21_bytes + first_4_bytes_of_sha256(sha256(raw_21_bytes)) )
+     *
      * Returns empty string on failure.
      */
     private function tron_hex_to_base58( $hex ) {
-        $hex = preg_replace( '/^0x/i', '', trim( $hex ) );
+        $hex = strtolower( preg_replace( '/^0x/i', '', trim( (string) $hex ) ) );
         if ( $hex === '' ) {
             return '';
         }
         if ( strlen( $hex ) % 2 ) {
             $hex = '0' . $hex;
         }
-        $bytes = [];
-        for ( $i = 0; $i < strlen( $hex ); $i += 2 ) {
-            $bytes[] = hexdec( substr( $hex, $i, 2 ) );
+        // Must be exactly 21 bytes (42 hex chars) for a TRON address.
+        if ( strlen( $hex ) !== 42 ) {
+            return '';
         }
-        $zeros = 0;
-        while ( $zeros < count( $bytes ) && $bytes[ $zeros ] === 0 ) {
+
+        // Append 4-byte SHA256d checksum.
+        $checksum = substr( hash( 'sha256', hash( 'sha256', hex2bin( $hex ), true ), true ), 0, 4 );
+        $payload  = hex2bin( $hex ) . $checksum;  // 25 bytes
+
+        // Standard Base58 encode.
+        $bytes  = array_values( unpack( 'C*', $payload ) );
+        $zeros  = 0;
+        foreach ( $bytes as $b ) {
+            if ( $b !== 0 ) break;
             $zeros++;
         }
-        $digits = [ 0 ];
+
+        $digits  = [ 0 ];
         foreach ( $bytes as $byte ) {
             $carry = $byte;
             for ( $j = 0; $j < count( $digits ); $j++ ) {
-                $value      = $digits[ $j ] * 256 + $carry;
+                $value       = $digits[ $j ] * 256 + $carry;
                 $digits[ $j ] = $value % 58;
-                $carry      = intdiv( $value, 58 );
+                $carry       = intdiv( $value, 58 );
             }
             while ( $carry > 0 ) {
                 $digits[] = $carry % 58;
                 $carry    = intdiv( $carry, 58 );
             }
         }
+
         $alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-        $out      = '';
+        $out      = str_repeat( '1', $zeros );
         for ( $i = count( $digits ) - 1; $i >= 0; $i-- ) {
             $out .= $alphabet[ $digits[ $i ] ];
         }
-        return str_repeat( '1', $zeros ) . ltrim( $out, '1' );
+        return $out;
     }
 
     /**
-     * Normalise any form of TRON address (Base58, hex with/without 0x prefix)
-     * to Base58Check. Returns empty string for unrecognised formats.
+     * Normalise any form of TRON address to Base58Check format.
+     *
+     * Accepts:
+     *  - Base58Check (34 chars, starts with T) — returned as-is
+     *  - 42-char hex with 41 prefix (full TRON internal format)
+     *  - 40-char hex without prefix (EVM-style, from event logs)
+     *
+     * Returns empty string for unrecognised formats.
      */
     private function normalize_tron_address( $address ) {
         $address = trim( (string) $address );
         if ( $address === '' ) {
             return '';
         }
-        // Already Base58.
+        // Already Base58Check.
         if ( $address[0] === 'T' && strlen( $address ) === 34 ) {
             return $address;
         }
         $hex = strtolower( preg_replace( '/^0x/i', '', $address ) );
+        // Full 42-char hex with 41 prefix.
         if ( strlen( $hex ) === 42 && str_starts_with( $hex, '41' ) ) {
             return $this->tron_hex_to_base58( $hex );
+        }
+        // 40-char hex without prefix (prepend TRON network byte 0x41).
+        if ( strlen( $hex ) === 40 && ctype_xdigit( $hex ) ) {
+            return $this->tron_hex_to_base58( '41' . $hex );
         }
         return '';
     }

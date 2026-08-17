@@ -409,16 +409,25 @@ trait WC_USDT_TRC20_Tron_Api {
             $to         = $this->tron_hex_to_base58( '41' . substr( $to_hex, 24 ) );
             $amount_raw = hexdec( substr( $amount_hex, 48 ) );
 
-            $contract_address = $param['contract_address'] ?? '';
+            // contract_address in raw_data is hex (e.g. "41eca9bc...").
+            // Normalise both sides to Base58 for a reliable comparison.
+            $contract_address_hex  = $param['contract_address'] ?? '';
+            $contract_address_b58  = $this->normalize_tron_address( $contract_address_hex );
+
+            $this->log( sprintf(
+                '[USDT][TXID] Decoded: to=%s contract_b58=%s expected_address=%s expected_contract=%s',
+                $to, $contract_address_b58, $address, $contract
+            ) );
+
             if ( ! $to || $to !== $address ) {
                 continue;
             }
-            if ( $contract && strtolower( $contract_address ) !== strtolower( $this->tron_base58_to_hex( $contract ) ) ) {
+            if ( $contract && strcasecmp( $contract_address_b58, $contract ) !== 0 ) {
                 continue;
             }
 
             $actual = ( (float) $amount_raw ) / 1_000_000;
-            $this->log( sprintf( '[USDT][TXID] Transfer candidate to=%s amount=%s contract=%s', $to, $actual, $contract_address ) );
+            $this->log( sprintf( '[USDT][TXID] Transfer candidate to=%s amount=%s contract=%s', $to, $actual, $contract_address_b58 ) );
 
             if ( abs( $actual - $expected_amount ) > 0.000001 ) {
                 return new WP_Error(
