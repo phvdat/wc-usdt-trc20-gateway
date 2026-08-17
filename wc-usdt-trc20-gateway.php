@@ -12,6 +12,11 @@
 
 defined('ABSPATH') || exit;
 
+// Absolute path to the main plugin file — used by traits to build asset URLs.
+if (!defined('WC_USDT_TRC20_PLUGIN_FILE')) {
+    define('WC_USDT_TRC20_PLUGIN_FILE', __FILE__);
+}
+
 final class WC_USDT_TRC20_Plugin {
     const CRON_HOOK = 'wc_usdt_trc20_check_payments';
     const TOKEN_DECIMALS = 6;
